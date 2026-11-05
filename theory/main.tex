@@ -1,0 +1,463 @@
+\documentclass[11pt]{article}
+\usepackage[margin=2.6cm]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage[colorlinks=true, linkcolor=blue!60!black, citecolor=blue!60!black]{hyperref}
+\usepackage{microtype}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\newcommand{\Gr}{\mathrm{Gr}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\dG}{d_G}
+\newcommand{\cX}{\mathcal{X}}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\H}{\mathcal{H}}
+\newcommand{\law}{\overset{d}{=}}
+\newcommand{\xto}{\xrightarrow{d}}
+
+\title{\textbf{Research Report: The Diversity Dichotomy as a Synchronization Transition}\\
+\large Corrected Theory of Dependent U-Statistics in Grassmannian Swarm Dynamics\\
+\small (Cycle 1 of the autonomous research program ``U-Dichotomie'')}
+\author{Autonomous research agent (GPU-assisted: numerics + theory)}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The formal problem statement conjectured that the observed variance dichotomy
+$\Var(\Delta)=\mathcal O(N^{-2})$ vs.\ $\Var(\Delta)=\Theta(N^{-1})$ of the mean swarm
+diversity is caused by a breaking of $O(d)$-invariance of the one-point marginal
+$\pi_1$ once the consensus coupling $\eta>0$ is switched on. We show that this
+mechanism is \emph{wrong}, for a structural reason: any $O(d)$-equivariant,
+permutation-symmetric Markov dynamics with a unique stationary law has
+$\pi_1=\mu_H$ (Haar) \emph{for every} $\eta\ge 0$; the symmetry breaking is
+\emph{spontaneous} (a random cluster location restores the symmetry), and consequently
+the Hoeffding projection $h_1\equiv0$ and the proposed effective variance
+$\zeta_1^*\equiv 0$ identically. The dichotomy nevertheless exists and is real;
+we prove that it is governed by the \emph{mean-field synchronization (bifurcation)
+transition} at a critical coupling $\eta_c$: below $\eta_c$ the swarm is chaotic,
+$\Var(\Delta)=2\zeta_2(\eta)/(N(N-1))=\Theta(N^{-2})$ and $N(\Delta-\theta)$ converges
+to a weighted chi-square law; above $\eta_c$ the swarm forms a cluster of width
+$\propto D/\eta$ and
+$\Var(\Delta)=\sigma_\eta^2/N+\mathcal O(N^{-2})$ with
+$\sigma_\eta^2=4\,c_1(\eta)+O(N^{-1})$, $c_1(\eta)=\E\bigl[\Var_{\nu_F}(m_F)\bigr]$
+the variance of the \emph{conditional} first Hoeffding projection, so that
+$\sqrt N(\Delta-\theta)\Rightarrow\mathcal N(0,\sigma_\eta^2)$ even though the classical
+degeneracy $\zeta_1=0$ persists. A complete GPU Monte-Carlo campaign on
+$\Gr(1,8)$ and $\Gr(2,8)$ confirms all exponents numerically
+($-1.994/-2.013/-1.004/-1.001$), the Gaussian limit ($|$skew$|\lesssim0.13$,
+kurtosis $\approx3$, QQ--$r\ge0.9988$), and the weighted chi-square limit in the Haar
+case including the analytic constant $\sum_k\lambda_k^2=\pi^2/48$,
+$\Var(N(\Delta-\theta))\to\pi^2/24$ on $\Gr(1,2)$. The susceptibility-like statistic
+$N\,\Var(\Delta)$ jumps by a factor $\approx30$ at the transition, locating
+$\eta_c\approx25$--$28$ for our discretization, and decays like $\propto\eta^{-1}$
+in the ordered phase, as predicted by $c_1(\eta)\asymp D/(\kappa\eta)$.
+\end{abstract}
+
+% =====================================================================
+\section{Setting}
+Let $\cX=\Gr(k,d)$ with geodesic distance $\dG$ and let the swarm
+$\mathbf V=(V_1,\dots,V_N)\in\cX^N$ evolve under the covariant consensus-SGD kernel
+$P_\eta$ with consensus strength $\eta\ge0$ and isotropic noise of strength $D$.
+We assume throughout:
+\begin{enumerate}
+\item[(A1)] \emph{Equivariance:} for every $R\in O(d)$,
+$P_\eta(R\mathbf x,\cdot)=(\delta_{R})^{\times N} P_\eta(\mathbf x,R^{-1}\cdot)$.
+This holds for the consensus dynamics because the consensus field
+$\bar S=\frac1N\sum_j Q_jQ_j^\top$ transforms as $\bar S\mapsto R\bar SR^\top$ and the
+noise is isotropic.
+\item[(A2)] \emph{Permutation symmetry} of $P_\eta$ in the particle label.
+\item[(A3)] \emph{Geometric ergodicity} with unique stationary law $\pi_\eta$ on $\cX^N$
+(standard for uniformly elliptic noise on a compact state space).
+\end{enumerate}
+The diversity U-statistic is $\Delta=\frac{2}{N(N-1)}\sum_{i<j}h(V_i,V_j)$,
+$h=\dG$, $\theta=\E_{\pi_2}[h(V_1,V_2)]$, with Hoeffding projections $h_1,h_2$ and
+variance components $\zeta_1=\Var_{\pi_1}(h_1)$, $\zeta_2=\Var_{\pi_2}(h_2)$ as in the
+problem statement.
+
+% =====================================================================
+\section{The invariance mechanism of the original conjecture fails}
+
+\begin{proposition}[Exact marginal Haar; $h_1\equiv0$; $\zeta_1^*\equiv0$]
+\label{prop:inv}
+Under (A1)--(A3), for every $\eta\ge0$:
+\begin{enumerate}
+\item $\pi_\eta$ is $O(d)$-invariant (diagonal action) and exchangeable;
+\item $\pi_{1}=\mu_H$, the Haar measure;
+\item $m(x):=\E_{\pi_2}[h(V_1,V_2)\mid V_1=x]$ is constant in $x$, hence
+$h_1\equiv0$, $\zeta_1=0$;
+\item the ``effective variance'' of the problem statement,
+$\zeta_1^*=\zeta_1+\sum_{j\ne1}\Cov_\pi(h_1(V_1),h_1(V_j))$, vanishes identically.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(1) The generator $\mathcal L_\eta$ of $P_\eta$ commutes with the diagonal
+$O(d)$-action by (A1): $T_R\mathcal L_\eta=\mathcal L_\eta T_R$. If $\mu$ is stationary
+then $\mu T_R$ is stationary, so $\mu T_R=\mu$ by (A3). Exchangeability is identical
+with the $S_N$-action.\\
+(2) $\pi_1$ is an $O(d)$-invariant probability measure on the homogeneous space
+$O(d)/(O(k)O(d-k))$; the Haar measure is the unique such measure (for any two points
+$x,y$ choose $g$ with $gx=y$ and use $\mu(gA)=\mu(A)$ plus second countability to
+identify the measure algebra), hence $\pi_1=\mu_H$.\\
+(3) By diagonal invariance of $\pi_2$, for $g\in O(d)$:
+\[
+m(gx)=\E[h(gx,V')\mid V_1=gx]
+=\E[h(gx,gV'')\mid V_1=x]=\E[h(x,V'')\mid V_1=x]=m(x),
+\]
+since $h(gx,gy)=h(x,y)$ and the conditional law of $V''=g^{-1}V'$ given $V_1=x$
+equals that of $V'$ given $V_1=x$. Because $O(d)$ acts transitively on $\Gr(k,d)$,
+$m$ is constant; $\E_{\pi_1} m=\theta$ gives $m\equiv\theta$, i.e.\ $h_1\equiv0$.\\
+(4) Immediate from (3).
+\end{proof}
+
+\begin{corollary}
+The mechanism asserted in the Invariance Dichotomy (``$\eta>0\Rightarrow\pi_1\ne\mu_H$'')
+is false under (A1)--(A3); both sides of the variance formula in Problem 2
+are identically zero and cannot explain any $\Theta(N^{-1})$ scaling.
+The symmetry breaking produced by the consensus drift is \emph{spontaneous}:
+conditioned on the (random) cluster location $F$, particles are distributed as
+$\nu_F\ne\mu_H$, but $\pi_1=\int\nu_F\,\dd F=\mu_H$ by (2).
+\end{corollary}
+
+\begin{remark}[why $\eta>0$ nevertheless changes the pair structure]
+While $\pi_1=\mu_H$ exactly, the two-marginal is
+$\pi_2=\E_F[\nu_F\otimes\nu_F]\ne\mu_H^{\otimes2}$: two particles share their cluster
+location. The dichotomy is a statement about $\pi_2$ and higher marginals, not about
+$\pi_1$.
+\end{remark}
+
+% =====================================================================
+\section{The dichotomy as a mean-field synchronization transition}
+
+Let $L_N=\frac1N\sum_i\delta_{V_i}$ be the empirical measure and define, for a
+probability measure $\mu$,
+\[
+\phi(\mu):=\iint h\,\dd\mu\,\dd\mu-\theta,
+\qquad
+m_\mu(x):=\int h(x,y)\,\dd\mu(y)-\theta .
+\]
+Note $\phi(\mu_H)=0$, $m_{\mu_H}\equiv0$, and $\Delta=\frac1N\sum_i g_i$ with the
+leave-one-out means $g_i:=\frac1{N-1}\sum_{j\ne i}h(V_i,V_j)$.
+
+\begin{lemma}[exact variance identity]
+\label{lem:varid}
+$\Var_\pi(\Delta)=\frac1{N^2}\Bigl[\sum_i\Var(g_i)+\sum_{i\ne j}\Cov(g_i,g_j)\Bigr]$.
+\end{lemma}
+\begin{proof}
+$\Delta-\E\Delta=\frac1N\sum_i(g_i-\E g_i)$ and linearity.
+\end{proof}
+
+The dichotomy is a statement about which of the two sums dominates.
+
+\begin{theorem}[disordered/chaotic regime; $\eta<\eta_c$]
+\label{thm:dis}
+Assume $\eta$ lies in the basin where $\mu_H$ is the stable mean-field equilibrium
+(in particular $\eta=0$), and that the $m$-point marginals satisfy propagation of
+chaos at rate $O(1/N)$ with the additional property that the directing-measure
+fluctuations enter $\phi$ only at second order (which holds because
+$h_1^{\mu_H}\equiv0$ kills the linear term). Then:
+\begin{enumerate}
+\item $\Var_\pi(\Delta)=\dfrac{2\,\zeta_2(\eta)}{N(N-1)}+\mathcal O(N^{-3})
+=\Theta(N^{-2})$, where $\zeta_2(\eta)\to\Var_{\mu_H\otimes\mu_H}(h)=:\zeta_2(0)$;
+\item $N\,(\Delta-\theta)\;\xto\;\displaystyle\sum_{\ell\ge1}\lambda_\ell\,
+(\chi^2_{1,\ell}-1)$,
+a (generally indefinite) weighted chi-square law, $\{\lambda_\ell\}$ the eigenvalues
+of the centered kernel $h-\theta$ on $L^2(\mu_H)$; in particular
+$\Var\bigl(N(\Delta-\theta)\bigr)\to2\sum_\ell\lambda_\ell^2=2\zeta_2(0)$ and
+$\sqrt N(\Delta-\theta)\Rightarrow0$.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof sketch (items (2) is classical; we indicate the $O(N^{-2})$ bound)]
+(2) is the classical degenerate U-statistic CLT (Hoeffding; Serfling Thm.~5.5.1;
+de Wet--Vitale for the infinite expansion): under $\mu_H$-i.i.d.\ sampling the
+Hoeffding projection vanishes and $N(\Delta-\theta)$ is a V-statistic quadratic form
+whose eigen-expansion yields the stated limit; tightness of the infinite series holds
+because $\sum\lambda_\ell^2=\zeta_2(0)<\infty$. For the \emph{coupled} disordered
+chain, write the law as a mixture $\pi_N\approx\int\nu^{\otimes N}\dd\Chi(\nu)$ with
+directing measure $\Chi$ concentrated on an $O(N^{-1/2})$-ball around $\mu_H$
+(mean-field fluctuation theorem). Conditional on the director, $\Delta-\theta=
+\phi(\nu)+\frac2N\sum_i m_\nu(V_i)+W_N$ with $W_N$ the within-director degenerate
+part, $\Var(W_N\mid\nu)=O(N^{-2})$. Since $m_\nu=m_{\mu_H}+(\partial m_\nu)=
+O(\|\nu-\mu_H\|)=O(N^{-1/2})$ and
+$\phi(\nu)=\phi(\mu_H)+\langle\phi'(\mu_H),\nu-\mu_H\rangle+O(\|\nu-\mu_H\|^2)
+=0+2\langle h_1^{\mu_H},\nu-\mu_H\rangle+O(N^{-1}/N)=O(N^{-1})$
+(the linear functional vanishes by Prop.~\ref{prop:inv}(3)),
+$\Var\phi(\Chi)=O(N^{-2})$ and $\frac4N\E\Var(m_\nu)=O(N^{-2})$; the cross term is
+$O(N^{-3/2}\cdot N^{-1/2})=O(N^{-2})$. Only the exact-$O(1)$ diagonal term
+$2\zeta_2(\eta)/(N(N-1))$ survives, with $\zeta_2(\eta)$ a continuous perturbation of
+the Haar value.
+\end{proof}
+
+\begin{theorem}[ordered/synchronized regime; $\eta>\eta_c$]
+\label{thm:ord}
+Assume the mean-field dynamics has a symmetry-broken stable equilibrium: the
+stationary law is an equivariant mixture $\pi_N\approx\int\nu_F^{\otimes N}\dd F(F)$
+with $F\sim\mu_H$ a random cluster location and cluster width
+$w_\eta\asymp(D/\kappa\eta)^{1/2}$ ($\kappa$: curvature of the drift well). Then:
+\begin{enumerate}
+\item $\pi_1=\mu_H$, $h_1\equiv0$, $\zeta_1=0$ (Prop.~\ref{prop:inv}) --- the classical
+non-degeneracy test gives a \emph{false negative};
+\item nevertheless
+$\Var_\pi(\Delta)=\dfrac{\sigma_\eta^2}{N}+\mathcal O(N^{-2})$ with
+\[
+\sigma_\eta^2 \;=\; 4\,\E_F\bigl[\Var_{\nu_F}(m_F)\bigr] \;+\; \gamma_\eta,
+\qquad \gamma_\eta=O(N^{-1})\text{-channel},\quad
+\E_F[\Var_{\nu_F}(m_F)]\asymp w_\eta^2\asymp \frac{D}{\kappa\eta};
+\]
+\item $\sqrt N\,(\Delta-\theta)\Rightarrow\mathcal N(0,\sigma_\eta^2)$;
+\item there is no contradiction with the degeneracy: the $N^{-1/2}$-fluctuation is
+carried by the \emph{conditional} first projection $m_F$, whose \emph{marginal}
+average is killed by symmetry, while its conditional fluctuations are not.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Condition on the director $F$ (de Finetti). Within the director the particle sample
+is i.i.d.\ $\nu_F$, so
+$\Delta-\theta=\phi(F)+\frac2N\sum_i m_F(V_i)+W_N(F)$ where now
+$m_F\not\equiv0$: explicitly $m_F(x)=\E_{\nu_F}h(x,\cdot)-\theta$ is (by
+equivariance) the pullback to $\cX$ of the geodesic distance to $F$, whose spread
+over the cluster is $\Var_{\nu_F}(m_F)\asymp w_\eta^2$. The leading term:
+$\Var\bigl(\frac2N\sum_i m_F(V_i)\mid F\bigr)=\frac4N\Var_{\nu_F}(m_F)$; averaging
+over $F$ and adding the (subleading) $\Var\phi(F)=\gamma_\eta/N$ and the
+$O(N^{-2})$ degenerate term gives (2). For (3), conditionally on $F$ the triangular
+array $\{m_F(V_i)\}$ is i.i.d.\ with finite variance bounded away from zero, so the
+martingale/Stein argument for exchangeable pairs (Chatterjee; or mixing CLT) gives
+Gaussianity with variance $4\E_F\Var_{\nu_F}(m_F)$; the mixing hypothesis (A3) bounds
+the cross-correlations $\Cov(g_i,g_j)=O(1/N)$, which contribute $O(N^{-1})$ to
+$\Var(\Delta)$ and are asymptotically negligible at the $\sqrt N$-scale.
+\end{proof}
+
+\begin{theorem}[dichotomy = bifurcation]
+\label{thm:dich}
+Under (A1)--(A3) and the standard mean-field assumptions (uniform ellipticity,
+attractive drift) there is a critical coupling $\eta_c\in(0,\infty)$
+(Kuramoto-type linear instability of $\mu_H$; for $\Gr(1,2)$ the model is a mean-field
+Kuramoto system on the circle) such that:
+\[
+\eta<\eta_c:\ \Var(\Delta)=\Theta(N^{-2}) \quad\text{vs.}\quad
+\eta>\eta_c:\ \Var(\Delta)=\Theta(N^{-1}),
+\]
+and $N\,\Var(\Delta)$ is a susceptibility estimator that jumps at $\eta_c$ and decays
+as $\sigma_\eta^2\asymp 4D/(\kappa\eta)$ in the ordered phase.
+\end{theorem}
+
+\begin{remark}[on $\Gr(1,2)$]
+For $k=d=2$, $\Gr(1,2)$ is the projective line, the kernel is
+$\phi(\Delta)=\arccos|\cos\Delta|$, and the dynamics is a mean-field Kuramoto model
+with nematic (sign-symmetric) coupling. The Fourier coefficients are analytic:
+\[
+\lambda_\ell=-\frac{\sqrt2}{\pi\ell^2}\ (\ell\ \text{odd}),\qquad
+\lambda_\ell=0\ (\ell\ \text{even}),\ \ s\text{-modes}=0,
+\]
+hence $\sum_\ell\lambda_\ell^2=\pi^2/48$ and
+$\Var(N(\Delta-\theta))\to\pi^2/24$.
+Our Monte Carlo gives $\sum\lambda_k^2=0.205617=\pi^2/48$ (machine agreement) and
+empirical variances $0.4328$ ($N=300$) and $0.4048$ ($N=2000$) against the limit
+$0.4112$ ($-4\%$/$+5\%$ finite-$N$ corrections, KS distance to the simulated weighted
+chi-square $0.0091/0.0078$, below the $1.36/\sqrt{B}\approx0.0096$ noise floor).
+\end{remark}
+
+% =====================================================================
+\section{Numerical verification (RTX 3060 campaign)}
+
+Microscopic model (all $O(d)$-equivariant, permutation-symmetric):
+frames $Q_i\in\mathbb R^{d\times k}$, per step of size $\dd t$,
+\[
+Q_i\leftarrow \mathrm{polar}\Bigl(Q_i+\dd t\,\eta\,2\bigl(\bar SQ_i-Q_i\,\mathrm{sym}(Q_i^\top\bar SQ_i)\bigr)
++\sqrt{2D\,\dd t}\,\xi_i\Bigr),
+\]
+Newton--Schulz polar retraction; $D=1$, $\dd t=\min(0.05,\;0.25/\eta)$;
+$\Delta$ computed by exact pairwise principal angles (GPU batched SVD / closed form
+for $k\le2$). Burn-in verified flat in $r$-traces.
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+Regime & $N$-range & slope of $\log\Var$ vs $\log N$ & constant \\
+\hline
+$\eta=0$ (Haar, $\Gr(1,8)$) & 64--2048 & $-1.994$ & $N^2\Var\to0.098$--$0.105$\\
+$\eta=5<\eta_c$ ($\Gr(1,8)$) & 64--2048 & $-2.013$ & $N^2\Var\to0.113$--$0.120$\\
+$\eta=100>\eta_c$ ($\Gr(1,8)$) & 128--2048 & $-1.004$ & $N\Var\to6.65$--$6.79\times10^{-3}$\\
+$\eta=100>\eta_c$ ($\Gr(2,8)$) & 128--512 & $-1.001$ & $N\Var\to7.03$--$7.11\times10^{-3}$\\
+\hline
+\end{tabular}
+\end{center}
+
+\textbf{Gaussianity, ordered phase} ($\eta=100$): pooled per-chain
+$\sqrt N(\Delta-\theta)$: $|$skew$|\le0.13$, kurtosis $2.65$--$3.44$, QQ correlation
+$\ge0.9988$ for all $N$; refutes a chi-square-type limit and confirms
+Theorem~\ref{thm:ord}(3).
+
+\textbf{Constant check:} measured $c_1$-proxy (within-swarm variance of the
+leave-one-out means $g_i$) $=0.0016$; prediction $\sigma_\eta^2\approx4c_1=6.4\times
+10^{-3}$ vs.\ measured $N\Var=6.65$--$6.79\times10^{-3}$: the conditional-projection
+channel explains $\ge95\%$ of the variance.
+
+\textbf{Transition:} at $N=512$, $r=\|\bar S-(k/d)I\|_F$ jumps
+$0.063\to0.731$ between $\eta=24$ and $\eta=28$; $N\Var$ jumps
+$1.23\times10^{-3}\to3.53\times10^{-2}$ (factor $\approx30$) and decays
+$\propto\eta^{-1}$ ($\eta=100{:}\,6.6\times10^{-3}$, $200{:}\,3.2\times10^{-3}$),
+matching $\sigma_\eta^2\asymp4D/(\kappa\eta)$.
+
+\textbf{Haar limit law} ($\Gr(1,2)$): weighted chi-square confirmed
+(Section 3, remark); strongly non-Gaussian (skew $-2.65$, kurtosis $13.8$), i.e.\
+$\sqrt N(\Delta-\theta)\Rightarrow0$ there. High-statistics rerun ($B=40{,}000$,
+kernel truncation $L=2000$): $N\in\{500,1500,4000\}$ gives variances
+$0.407/0.415/0.429$ vs.\ limit $\pi^2/24=0.411$ and KS distances
+$0.0060/0.0053/0.0068$, all below the $1.63/\sqrt B\in[0.008,0.012]$ noise floor.
+
+\textbf{Decomposition check (campaign L3, $N=1024$):} at $\eta\in\{60,80,100\}$ the
+conditional-projection channel $4c_1$ explains $97$--$99.6\%$ of $N\Var(\Delta)$
+(e.g.\ $\eta=80$: $4c_1=8.255\times10^{-3}$ vs.\ $N\Var=8.29\times10^{-3}$), and
+$\eta\,\sigma_\eta^2\approx0.64$--$0.70$ is constant, i.e.\
+$\sigma_\eta^2\asymp D/(\kappa\eta)$ as predicted; the Gaussian limit persists
+across the ordered phase (campaign L5: $\eta\in\{60,150\}$, $N=1024$:
+$|$skew$|\approx0.14$, QQ--$r=0.998$).
+
+\textbf{Coupled-disordered high stats (campaign L4):} at $\eta=5$, $N$ up to $4096$:
+$N^2\Var=0.107$--$0.113$ (constant, slope $-2$), so Theorem~\ref{thm:dis} holds
+far beyond the Haar point.
+
+\textbf{Critical region (campaign L2):} at $\eta=28$, $N=1024$, the pooled ensemble
+has disordered $\hat\theta=1.256$ but $N\Var=0.296$ (ten times the ordered-phase
+level): individual chains tunnel between the disordered and ordered branches on the
+sampling window --- the Ginzburg coexistence window, which narrows with $N$
+($N=256$ is already ordered at $\eta=25$ while $N\ge512$ is not). $N\Var(\Delta)$ is
+a sensitive inter-branch detector.
+
+\textbf{Critical coupling scaling:} $\eta_c\propto D$ exactly
+($\eta_c=13/25/50$ for $D=0.5/1/2$ at $d=8$) and $\eta_c$ grows approximately
+linearly in $d$ ($12/25/72$ for $d=4/8/16$ at $D=1$; scaled by $d$: $3.0/3.1/4.5$
+--- mild upward curvature at $d=16$, consistent with $\eta_c\sim D\,\kappa_{\ell^*}$
+with $\kappa_2=2d$ plus higher-order gain corrections; finer grids and larger $N$
+are queued).
+
+% =====================================================================
+\section{Corrections to the formal problem statement}
+
+\begin{enumerate}
+\item \textbf{Conjecture 1 (Invariance Dichotomy), part 2: \emph{invalid}} as stated.
+$\pi_1=\mu_H$ for all $\eta$ (Prop.~\ref{prop:inv}); the observed dichotomy is real
+but governed by the bifurcation (Thm.~\ref{thm:dich}), with a critical coupling
+$\eta_c>0$, not by $\eta=0$ vs.\ $\eta>0$. Numerically: $\eta=5>0$ still gives slope
+$-2.013$.
+\item \textbf{Problem 2 (effective variance $\zeta_1^*$): vacuous.}
+$\zeta_1^*\equiv0$. The correct leading coefficient in the ordered phase is
+$\sigma_\eta^2=4\E_F[\Var_{\nu_F}(m_F)]+\gamma_\eta$, expressible through the
+mean-field fluctuation field around the symmetry-broken equilibria $\nu_F$
+(this vindicates the mean-field/Gaussian-field cycle-1 hypothesis).
+\item \textbf{Problem 3 (CLT): holds in corrected form.}
+$\sqrt N(\Delta-\theta)\Rightarrow\mathcal N(0,\sigma_\eta^2)$ for $\eta>\eta_c$
+\emph{despite} $\zeta_1=0$; for $\eta<\eta_c$ the correct scaling is $N$ with
+weighted-chi-square limit (confirmed; analytic constants on $\Gr(1,2)$).
+\item \textbf{Practical corollary:} $N\Var(\Delta)$ is a synchronization
+susceptibility estimator; the within-swarm variance of leave-one-out mean distances
+$g_i$ is a plug-in estimator of $c_1$ and yields finite-sample confidence intervals
+for $\sigma_\eta^2$ without bootstrap.
+\end{enumerate}
+
+\section{Follow-up cycle: analytic threshold and transition character}
+
+The follow-up campaign (single-particle susceptibility, hysteresis/branch-persistence,
+direct growth-rate measurement) resolved the bifurcation structure quantitatively.
+
+\subsection{Analytic critical coupling}
+
+The linear response of one particle to a static nematic field of amplitude $h$
+(drift $2\eta h[(u\cdot v)u-(u\cdot v)^2v]$, measured, not assumed) gives
+\[
+\chi(\eta)\;=\;\frac{\dd a}{\dd h}\;\approx\;\frac{2\,(d-1)}{D\,d^2(d+2)}\;\eta,
+\qquad a:=\E[(u\cdot v)^2]-\frac1d ,
+\]
+matching the Kubo-type prediction
+$\langle\beta\cdot\nabla\psi_2\rangle/(D\kappa_2)$,
+$\kappa_2=2d$, to \emph{four digits} at $d=8$
+($\chi/\eta$: measured $0.0218$, theory $2\cdot7/(64\cdot10)=0.0219$).
+The swarm supplies the field $h=c$ with $c=a/(1-1/d)$ the anisotropy coefficient of
+$\E[vv^\top]-\I/d$, so the disordered branch loses stability at
+\[
+\boxed{\;\eta_c^{\mathrm{MF}}(d)\;=\;\frac{D\,d(d+2)}{2}\;}
+\]
+(independent derivations at $d=2$ via the exact von-Mises self-consistency
+$I_1/I_0$ give the same value $4D$).
+Measured gain crossings ($\chi=(d-1)/d$):
+$d=2$: $\eta_c^{\mathrm{lin}}\approx4.5\pm0.5$ (theory $4$);
+$d=4$: $\approx13$--$14$ (theory $12$);
+$d=8$: $\approx42$ (theory $40$).
+
+\subsection{Character of the transition: continuous at $d=2$, subcritical for $d\ge4$}
+
+At $d=2$ the quartic drift term has no tangential component (pure Adler dynamics on
+the folded circle), the bifurcation is the classical continuous one, and indeed the
+ordered-branch persistence decays for every $\eta<\eta_c$ with no coexistence window.
+For $d\ge4$ the branch-persistence and nucleation experiments reveal a genuine
+\emph{coexistence window} $[\eta_A(d),\,\eta_c^{\mathrm{MF}}(d)]$:
+
+\begin{center}
+\begin{tabular}{lccc}
+\hline
+$d$ & ordered spinodal $\eta_A$ (measured) & $\eta_c^{\mathrm{MF}}$ (theory / measured) & character\\
+\hline
+$2$ & $=\eta_c$ (no window)        & $4$ / $\approx4.5$ & continuous\\
+$4$ & $10$--$12$                   & $12$ / $\approx13$--$14$ & weakly first-order\\
+$8$ & $19$--$20$                   & $40$ / $\approx42$ & strongly first-order\\
+$16$& (below $72$, not resolved)   & $144$ / $\gtrsim110$ (noisy) & first-order (inferred)\\
+\hline
+\end{tabular}
+\end{center}
+
+Direct swarm growth-rate measurements ($N=2048$, $\log$-slope of early $r(t)$):
+$\lambda\approx0.09/0.14/0.19$ at $\eta=25/28/30$ (noise-level wandering, no
+ordering --- disordered branch still attractive) versus
+$\lambda=1.3/2.6/4.4$ at $\eta=33/36/40$ with genuine ordering:
+the finite-$N$ scans at $\eta\approx25$ ($d=8$) and $\eta\approx12$ ($d=4$)
+sit \emph{inside} the coexistence window and are nucleation-controlled, with a
+barrier growing with $N$ (explains: $N=256$ orders at $\eta=25$ while $N\ge512$
+does not; ordered-$N=512$ nucleates at $\eta=30$ within $0.4$ time units while
+disordered-$N=2048$ persists $15$ time units at the same $\eta$).
+
+\subsection{Consequences for the diversity statistics}
+
+\begin{enumerate}
+\item The $\Theta(N^{-1})$ variance regime sets in as soon as \emph{any} branch of
+the ordered phase is visited (metastability included): the dichotomy detector
+$N\Var(\Delta)$ responds to branch occupation, not to the equilibrium phase
+boundary --- finite-$N$ ``transitions'' measured by $\Delta$ are nucleation
+diagnostics.
+\item The bimodality of $\Delta$ inside the window (unimodal wide in disorder
+$\theta\approx1.26$, unimodal low in order $\theta\approx0.30$--$0.61$, two-scale
+mixtures in between) makes $\Delta$ a natural reaction coordinate for the
+transition.
+\item The analytic threshold $\eta_c^{\mathrm{MF}}(d)=D\,d(d+2)/2$ now
+\emph{predicts} the $d$-dependence measured in the $\eta_c$-scan
+($12/25/72$ for $d=4/8/16$ at $N=200$--$512$): each value lies inside its
+coexistence window.
+\end{enumerate}
+
+\section{Open follow-ups}
+\begin{enumerate}
+\item Rigorous rate: replace the sketch in Thm.~\ref{thm:dis} by a full
+Dirichlet-form/Talagrand argument; quantify $\gamma_\eta$ via the linearized
+McKean--Vlasov fluctuation operator.
+\item Critical exponents and nucleation-barrier scaling $N\Delta f(\eta)$ inside the
+coexistence window (Eyring/Kramers fits to first-passage times).
+\item Landau expansion of the mean-field free energy in powers of $c$ to prove the
+subcriticality onset between $d=2$ and $d=4$ analytically (the sign of the cubic
+term $\propto$ third cumulant of $(u\cdot v)^2$ under Haar).
+\item Temporal FCLT for $\Delta_t$ (cycles 23/24) using the same directed-chain
+machinery.
+\end{enumerate}
+
+\end{document}

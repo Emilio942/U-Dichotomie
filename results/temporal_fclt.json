@@ -1,0 +1,8 @@
+{
+ "tau_int_steps": 1.0,
+ "tau_int_physical": 0.0125,
+ "se_single": 0.0036072363993698824,
+ "qq_blockmeans": 0.9668368495837676,
+ "skew_blockmeans": -0.7148345943249996,
+ "n_blocks": 16
+}
